@@ -10,7 +10,7 @@ const router = useRouter()
   <main class="min-h-screen flex items-center justify-center p-8">
     <div class="max-w-md text-center space-y-4">
       <p class="text-sm font-medium text-muted-foreground">404</p>
-      <h1 class="text-2xl font-semibold tracking-tight">Page not found</h1>
+      <h1 class="font-display text-2xl font-semibold tracking-tight">Page not found</h1>
       <p class="text-base text-muted-foreground">
         The page you're looking for doesn't exist.
       </p>

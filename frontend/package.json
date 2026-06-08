@@ -15,6 +15,8 @@
     "format": "oxfmt src/"
   },
   "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "^5.2.10",
+    "@fontsource-variable/geist": "^5.2.8",
     "@incremark/theme": "^0.3.10",
     "@incremark/vue": "^0.3.10",
     "@meldui/charts-vue": "^0.3.2",

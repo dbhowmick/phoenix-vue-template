@@ -14,7 +14,7 @@ function increment() {
 <template>
   <main class="min-h-screen flex items-center justify-center p-8">
     <div class="max-w-xl text-center space-y-6">
-      <h1 class="text-4xl font-semibold tracking-tight">Welcome to PhoenixVue</h1>
+      <h1 class="font-display text-4xl font-semibold tracking-tight">Welcome to PhoenixVue</h1>
       <p class="text-base text-muted-foreground">
         Phoenix 1.8 + Vue 3 + Vite — wired up and ready. Edit
         <code class="font-mono text-sm rounded bg-muted px-1.5 py-0.5">
