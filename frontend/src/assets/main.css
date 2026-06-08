@@ -1,24 +1,9 @@
 @import 'tailwindcss';
+@import 'tw-animate-css';
+@import '@meldui/vue/themes/default';
 
-@layer base {
-  html {
-    font-family:
-      ui-sans-serif,
-      system-ui,
-      -apple-system,
-      BlinkMacSystemFont,
-      'Segoe UI',
-      Roboto,
-      sans-serif;
-  }
-
-  body {
-    @apply bg-white text-neutral-900 antialiased;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    body {
-      @apply bg-neutral-950 text-neutral-100;
-    }
-  }
-}
+/* Tailwind v4 source scanning — needed so utility classes used inside the
+   meldui component library (under node_modules/@meldui/vue/dist) are
+   discovered alongside our own source files. */
+@source "../**/*.{vue,ts,tsx,js,jsx}";
+@source "../../node_modules/@meldui/vue/dist/**/*.mjs";
