@@ -32,10 +32,15 @@ Run `mix precommit` before every commit.
 ## Architecture
 
 - `lib/__OTP__/` — business logic root: `application.ex`, `repo.ex`, `mailer.ex`. New contexts go here.
-- `lib/__OTP___web/` — web layer: `endpoint.ex`, `router.ex`, `telemetry.ex`, `components/`, `controllers/`, `gettext.ex`.
-- `assets/` — `js/app.js` + `css/app.css`. Tailwind v4 uses the `@import "tailwindcss"` syntax inside `app.css` (no `tailwind.config.js`).
+- `lib/__OTP___web/` — web layer: `endpoint.ex`, `router.ex`, `telemetry.ex`, `components/`, `controllers/`, `gettext.ex`, `plugs/`. `PageController.home` renders the SPA shell; a catch-all `GET /*path` at the bottom of `router.ex` sends every browser path through it so vue-router survives deep-link refreshes.
+- `frontend/` — Vue 3 SPA (Vite 8 + Tailwind v4 + Pinia + Vue Router 5, OXC toolchain). Entry is `src/main.ts`. Vite builds into `../priv/static`; dev server runs on `:4001` (HMR `:4002`) inside a `node` watcher started by `mix phx.server`. Package manager is **pnpm**. CSRF token comes from `<meta name="csrf-token">` in the root layout via `src/lib/csrf.ts`.
+- `priv/static/assets/` — Vite build output (gitignored). Populated by `mix assets.build` / `mix assets.deploy`. **No `assets/` directory** on the Phoenix side — Vite owns all CSS/JS.
 - `priv/repo/migrations/` — Ecto migrations.
 - HTTP server: Bandit (`Bandit.PhoenixAdapter` in `config/config.exs`).
+
+## Dev flow
+
+`mix phx.server` runs Phoenix on `:4000` and spawns Vite on `:4001`. The root layout (`lib/__OTP___web/components/layouts/root.html.heex`) conditionally injects either the dev `<script src="//host:4001/@vite/client">` tags or the prod digested `/assets/main.{js,css}` links, keyed off `Application.get_env(:__OTP__, :vite_dev_server)`. Prod build: `MIX_ENV=prod mix assets.deploy` → Vite builds + `phx.digest` cache-busts.
 
 ## Framework rules — see AGENTS.md
 

@@ -33,7 +33,12 @@ phoenix_vue_template-*.tar
 
 # In case you use Node.js/npm, you want to ignore these.
 npm-debug.log
-/assets/node_modules/
 
 # ElixirLS editor cache.
 /.elixir_ls/
+
+# Vue SPA build artifacts (built into priv/static/assets by Vite).
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.vite/
+/priv/static/assets/

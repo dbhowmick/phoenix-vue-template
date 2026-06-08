@@ -1,8 +1,15 @@
 defmodule PhoenixVueWeb.PageControllerTest do
   use PhoenixVueWeb.ConnCase
 
-  test "GET /", %{conn: conn} do
+  test "GET / renders the SPA shell", %{conn: conn} do
     conn = get(conn, ~p"/")
-    assert html_response(conn, 200) =~ "Peace of mind from prototype to production"
+    body = html_response(conn, 200)
+    assert body =~ ~s(<div id="app">)
+    assert body =~ ~s(<meta name="csrf-token")
+  end
+
+  test "GET /deep/spa/route also renders the shell (vue-router fallback)", %{conn: conn} do
+    conn = get(conn, "/some/deep/route")
+    assert html_response(conn, 200) =~ ~s(<div id="app">)
   end
 end

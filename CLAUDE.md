@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `phoenix-vue-template` is a personal starter template for the owner's go-to stack: **Phoenix 1.8 + Vue 3 + Postgres + Oban**. The intent is to clone this repo from GitHub and immediately begin shipping a new project without re-doing the same wiring every time.
 
-**Current state:** stock `mix phx.new` scaffold — Phoenix 1.8.5 + LiveView 1.1 + Bandit + Postgres + Tailwind v4 + esbuild. Nothing has been committed yet; no migrations, no Vue, no Oban.
+**Current state:** Phoenix 1.8.5 + LiveView 1.1 + Bandit + Postgres + Vue 3 SPA (Vite 8 + Tailwind v4 + OXC). The Phoenix-side esbuild/tailwind pipeline has been removed — Vite owns all asset compilation, builds into `priv/static/assets/`. No migrations, no Oban yet.
 
 
 ## Template Goal & Reference Implementation
@@ -17,8 +17,8 @@ The canonical reference for what this template should grow into is `/Users/dipay
 
 | Area | Status | Plan (mirror from doqo-server) |
 |---|---|---|
-| Phoenix 1.8 + LiveView 1.1 + Bandit + Postgres + Tailwind v4 + esbuild + Heroicons + Req + Swoosh | ✓ in place | — |
-| Vue 3 SPA | ✗ | Vite-served in dev, digested in prod; `root.html.heex` shell with single `<div id="app">`; catch-all route last (see doqo `lib/doqo_web/components/layouts/root.html.heex` and `frontend/vite.config.ts`) |
+| Phoenix 1.8 + LiveView 1.1 + Bandit + Postgres + Req + Swoosh | ✓ in place | — |
+| Vue 3 SPA (Vite 8 + Tailwind v4 + OXC + Pinia + Vue Router 5) | ✓ in place | Vite-served in dev on `:4001` (HMR `:4002`), digested into `priv/static/assets/` in prod. `root.html.heex` injects `<script>` tags conditionally on `Application.get_env(:phoenix_vue_template, :vite_dev_server)`. SPA catch-all route is declared LAST. CSRF token in `<meta name="csrf-token">`, read by `frontend/src/lib/csrf.ts`. |
 | Oban | ✗ | Two-release topology (`web` queues `default`/`mailer`; `processors` for heavy work); queues set in `config/runtime.exs` from `RELEASE_NAME` |
 | Authentication | ✗ | Three-module split: `PhoenixVue.Accounts` (identity), `PhoenixVue.Organizations` (tenancy), `PhoenixVue.Auth` (plugs/tokens/mailers) |
 | Query modules | ✗ | Every schema `lib/.../<thing>.ex` gets a sibling `<thing>_queries.ex`; schemas never call `Repo` |
@@ -47,11 +47,18 @@ Run `mix precommit` before every commit (also called out in `AGENTS.md`).
 ## Architecture Notes (current scaffold)
 
 - `lib/phoenix_vue_template/` — business logic root: `application.ex`, `repo.ex`, `mailer.ex`. New contexts (`PhoenixVue.Accounts`, etc.) go here.
-- `lib/phoenix_vue_template_web/` — web layer: `endpoint.ex`, `router.ex`, `telemetry.ex`, `components/`, `controllers/`, `gettext.ex`.
-- `assets/` — `js/app.js` + `css/app.css`. Tailwind v4 uses the new `@import "tailwindcss"` syntax inside `app.css` (no `tailwind.config.js`). Vendored: `heroicons.js`, `daisyui.js`, `topbar.js`. **No `package.json` yet** — Vue integration will introduce one and a `frontend/` directory.
+- `lib/phoenix_vue_template_web/` — web layer: `endpoint.ex`, `router.ex`, `telemetry.ex`, `components/`, `controllers/`, `gettext.ex`, `plugs/`. `PageController.home` renders the SPA shell; the catch-all `GET /*path` route at the bottom of `router.ex` sends every browser path through it so vue-router survives deep-link refreshes. `Plugs.AssignRequestHost` resolves the safe `@request_host` for the dev Vite URL.
+- `frontend/` — Vue 3 SPA. Entry is `src/main.ts`. Vite config (`vite.config.ts`) builds into `../priv/static`, dev server on `:4001` (HMR `:4002`). Package manager is **pnpm**. `lib/csrf.ts` reads the CSRF token from the root layout's `<meta>` tag.
+- `priv/static/assets/` — Vite build output. Gitignored; populated by `mix assets.build` / `mix assets.deploy`. **No `assets/` directory** on the Phoenix side — Vite owns all CSS/JS.
 - `priv/repo/migrations/` — empty.
 - Dev DB: `phoenix_vue_template_dev` (Postgres, default `postgres`/`postgres` from `config/dev.exs`).
 - HTTP server: Bandit (`Bandit.PhoenixAdapter` in `config/config.exs`).
+
+## Dev flow
+
+`mix phx.server` starts Phoenix on `:4000` and (via the `watchers:` config in `config/dev.exs`) spawns `node frontend/vite-dev.mjs`, which runs the Vite dev server on `:4001`. The root layout injects `<script src="//{request_host}:4001/@vite/client">` + `<script src="//{request_host}:4001/src/main.ts">` so the browser pulls modules directly from Vite — full HMR for `.vue` / `.ts` / `.css` edits. The Phoenix `live_reload` config still triggers full page reloads when `.heex` / router files change.
+
+For prod (`MIX_ENV=prod mix assets.deploy`), Vite builds into `priv/static/assets/main.js` + `main.css`, then `mix phx.digest` cache-busts. The `:vite_dev_server` env var is unset in prod, so `root.html.heex` falls back to the digested `~p"/assets/main.{js,css}"` links.
 
 ## Framework Rules — see AGENTS.md
 

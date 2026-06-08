@@ -25,9 +25,21 @@ config :phoenix_vue_template, PhoenixVueWeb.Endpoint,
   debug_errors: true,
   secret_key_base: "OTB48+H+HJKfX+LC6f0Q+XG5i9VqmKNG2q76zMoWSLgugf0OGp1qMtfL+rFHfbHo",
   watchers: [
-    esbuild: {Esbuild, :install_and_run, [:phoenix_vue_template, ~w(--sourcemap=inline --watch)]},
-    tailwind: {Tailwind, :install_and_run, [:phoenix_vue_template, ~w(--watch)]}
+    node: ["vite-dev.mjs", cd: Path.expand("../frontend", __DIR__)]
   ]
+
+# Vite dev server config. The root.html.heex reads this to decide whether to
+# inject //{request_host}:{port}/@vite/client + /src/main.ts script tags (dev)
+# or the digested /assets/main.{js,css} (prod, when this is unset).
+#
+# `allowed_hosts` is an opt-in list of additional Host: header values that
+# AssignRequestHost will accept verbatim. Use it for Tailscale MagicDNS names
+# or LAN hostnames you reach the dev server from. Loopback / 0.0.0.0 / ::1 /
+# any IP literal are always allowed without listing them here.
+config :phoenix_vue_template, :vite_dev_server,
+  enabled: true,
+  port: 4001,
+  allowed_hosts: []
 
 # ## SSL Support
 #
@@ -57,13 +69,9 @@ config :phoenix_vue_template, PhoenixVueWeb.Endpoint,
   live_reload: [
     web_console_logger: true,
     patterns: [
-      # Static assets, except user uploads
-      ~r"priv/static/(?!uploads/).*\.(js|css|png|jpeg|jpg|gif|svg)$"E,
-      # Gettext translations
-      ~r"priv/gettext/.*\.po$"E,
-      # Router, Controllers, LiveViews and LiveComponents
-      ~r"lib/phoenix_vue_template_web/router\.ex$"E,
-      ~r"lib/phoenix_vue_template_web/(controllers|live|components)/.*\.(ex|heex)$"E
+      ~r"priv/static/(?!uploads/).*(js|css|png|jpeg|jpg|gif|svg)$",
+      ~r"priv/gettext/.*(po)$",
+      ~r"lib/phoenix_vue_template_web/(?:controllers|live|components|router)/?.*\.(ex|heex)$"
     ]
   ]
 
