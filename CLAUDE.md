@@ -9,21 +9,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Current state:** Phoenix 1.8.5 + LiveView 1.1 + Bandit + Postgres + Oban (OSS 2.22) + Vue 3 SPA (Vite 8 + Tailwind v4 + Meldui + OXC). Static analysis (Credo + Dialyzer) wired into `mix precommit`. The Phoenix-side esbuild/tailwind pipeline has been removed — Vite owns all asset compilation, builds into `priv/static/assets/`.
 
 
-## Template Goal & Reference Implementation
+## Template Goal
 
-The canonical reference for what this template should grow into is `/Users/dipayan/work/doqo/doqo-workspace/doqo-server` — a mature production app on the exact same stack. When adding any major piece (Vue SPA, Oban, auth, query modules, two-release topology, storage façade, etc.), open `doqo-server/CLAUDE.md` and the relevant source files and **mirror the patterns** rather than inventing new ones. The user's preferences are codified there; this template exists to make them reusable.
+The template captures the wiring I reach for on every new Phoenix project so I can stop rebuilding the same plumbing. When adding a major piece (Vue SPA, Oban, auth, query modules, two-release topology, storage façade, etc.), **prefer mirroring proven patterns from existing production code over inventing new ones** — this template exists to make those patterns reusable.
 
 ## Current State vs. Template Goal
 
-| Area | Status | Plan (mirror from doqo-server) |
+| Area | Status | Notes |
 |---|---|---|
 | Phoenix 1.8 + LiveView 1.1 + Bandit + Postgres + Req + Swoosh | ✓ in place | — |
 | Vue 3 SPA (Vite 8 + Tailwind v4 + Meldui + OXC + Pinia + Vue Router 5) | ✓ in place | Vite-served in dev on `:4001` (HMR `:4002`), digested into `priv/static/assets/` in prod. `root.html.heex` injects `<script>` tags conditionally on `Application.get_env(:phoenix_vue_template, :vite_dev_server)`. SPA catch-all route is declared LAST. CSRF token in `<meta name="csrf-token">`, read by `frontend/src/lib/csrf.ts`. Meldui (Reka-UI based) is the component substrate; Tabler icons via `@meldui/tabler-vue`; Geist + Bricolage Grotesque fonts via `@fontsource-variable/*`. |
 | Oban (OSS 2.22) | ✓ in place | Two-release topology in `config/runtime.exs`: `phoenix_vue_template_server` runs `default`/`mailer` queues + Pruner + Cron; `phoenix_vue_template_processors` runs heavy queues + Pruner only. Tests use `testing: :inline`. |
-| Credo (`--strict`) + Dialyzer | ✓ in place | `.credo.exs` mirrors doqo's check list. Dialyzer PLT stored at `priv/plts/` (gitignored). Both run as part of `mix precommit`. |
+| Credo (`--strict`) + Dialyzer | ✓ in place | Comprehensive `.credo.exs` check list. Dialyzer PLT stored at `priv/plts/` (gitignored). Both run as part of `mix precommit`. |
 | Authentication | ✗ | Three-module split: `PhoenixVue.Accounts` (identity), `PhoenixVue.Organizations` (tenancy), `PhoenixVue.Auth` (plugs/tokens/mailers) |
 | Query modules | ✗ | Every schema `lib/.../<thing>.ex` gets a sibling `<thing>_queries.ex`; schemas never call `Repo` |
-| Migrations / schemas / API routes / OAuth / storage façade | ✗ | Add as features land; follow doqo conventions |
+| Migrations / schemas / API routes / OAuth / storage façade | ✗ | Add as features land; follow established conventions |
 
 ## Essential Commands
 
@@ -162,9 +162,8 @@ For prod (`MIX_ENV=prod mix assets.deploy`), Vite builds into `priv/static/asset
 
 ## When Extending the Template
 
-Before adding a new architectural piece (Vue, Oban, auth, OAuth, storage, etc.):
+Before adding a new architectural piece (auth, OAuth, storage, query modules, etc.):
 
-1. Read the corresponding section of `/Users/dipayan/work/doqo/doqo-workspace/doqo-server/CLAUDE.md`.
-2. Read the actual implementation files in `doqo-server` (e.g., for Oban: `lib/doqo/documents/workers/embedding.ex` and `config/runtime.exs`; for SPA shell: `lib/doqo_web/components/layouts/root.html.heex` and `frontend/vite.config.ts`).
-3. Mirror module naming (`Accounts` / `Organizations` / `Auth` split), error tuples (`{:ok, _} | {:error, _}`, never `!` bangs in app code), query-module split, façade modules for external systems (storage, etc.).
-4. Update this CLAUDE.md to flip the corresponding row in the "Current State vs. Template Goal" table from ✗ to ✓ once the piece lands.
+1. Prefer mirroring battle-tested implementations from prior production code over inventing new structure. If the user references a specific reference codebase, read the relevant files there first.
+2. Mirror module naming (`Accounts` / `Organizations` / `Auth` split), error tuples (`{:ok, _} | {:error, _}`, never `!` bangs in app code), the query-module split (`<thing>.ex` schema + sibling `<thing>_queries.ex`; schemas never call `Repo`), and façade modules for external systems (storage, search, LLM, etc.).
+3. Update this CLAUDE.md to flip the corresponding row in the "Current State vs. Template Goal" table from ✗ to ✓ once the piece lands.
