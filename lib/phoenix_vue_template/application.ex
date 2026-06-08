@@ -13,6 +13,7 @@ defmodule PhoenixVue.Application do
       {DNSCluster,
        query: Application.get_env(:phoenix_vue_template, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: PhoenixVue.PubSub},
+      {Oban, Application.fetch_env!(:phoenix_vue_template, Oban)},
       # Start a worker by calling: PhoenixVue.Worker.start_link(arg)
       # {PhoenixVue.Worker, arg},
       # Start to serve requests, typically the last entry

@@ -23,6 +23,51 @@ end
 config :phoenix_vue_template, PhoenixVueWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
+# ----------------------------------------------------------------------------
+# Oban — two-release topology
+#
+# RELEASE_NAME is set by the release script (`bin/<release_name> start`).
+# In dev / iex / test it's nil, so every queue runs in one node — handy for
+# local development. In prod, split into two releases:
+#
+#   - `phoenix_vue_template_server`     → web traffic + light jobs (default,
+#                                          mailer). Hosts the cron plugin.
+#   - `phoenix_vue_template_processors` → heavy background work. Add queues
+#                                          (e.g. embeddings, conversions) as
+#                                          features land. Pruner only.
+#
+# Cron jobs live on the server release so they're declared in one place even
+# though they may enqueue work that processors consume.
+# ----------------------------------------------------------------------------
+oban_queues =
+  case System.get_env("RELEASE_NAME") do
+    "phoenix_vue_template_server" ->
+      [default: 10, mailer: 5]
+
+    "phoenix_vue_template_processors" ->
+      # Add heavy queues here as features land (e.g. documents: 4, embeddings: 2).
+      [default: 10]
+
+    _ ->
+      [default: 10, mailer: 5]
+  end
+
+oban_plugins =
+  if System.get_env("RELEASE_NAME") == "phoenix_vue_template_processors" do
+    [{Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7}]
+  else
+    [
+      {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
+      # Add cron jobs here. Empty crontab is fine — projects fill it in.
+      {Oban.Plugins.Cron, crontab: []}
+    ]
+  end
+
+config :phoenix_vue_template, Oban,
+  repo: PhoenixVue.Repo,
+  queues: oban_queues,
+  plugins: oban_plugins
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||

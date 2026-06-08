@@ -23,6 +23,10 @@ config :phoenix_vue_template, PhoenixVueWeb.Endpoint,
 # In test we don't send emails
 config :phoenix_vue_template, PhoenixVue.Mailer, adapter: Swoosh.Adapters.Test
 
+# Oban runs synchronously in tests — jobs execute on the calling process so
+# assertions can observe their effects without polling.
+config :phoenix_vue_template, Oban, testing: :inline
+
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
 

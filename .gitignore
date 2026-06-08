@@ -37,6 +37,9 @@ npm-debug.log
 # ElixirLS editor cache.
 /.elixir_ls/
 
+# Dialyzer PLT cache (built by `mix dialyzer`).
+/priv/plts/
+
 # Vue SPA build artifacts (built into priv/static/assets by Vite).
 /frontend/node_modules/
 /frontend/dist/
