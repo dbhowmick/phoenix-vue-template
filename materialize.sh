@@ -145,13 +145,12 @@ git init -b main >/dev/null
 echo "Fetching deps..."
 if command -v mix >/dev/null 2>&1; then
   mix deps.get
-  if ! mix ecto.create; then
-    echo
-    echo "Warning: 'mix ecto.create' failed. Check your Postgres connection in config/dev.exs."
-    echo "You can re-run it after fixing: mix ecto.create"
-  fi
+  # Pull the frontend deps too so the node watcher can boot when the project
+  # is first run with `mix phx.server`. DB setup is left to the operator —
+  # spin up docker-compose, then run mix ecto.create + ecto.migrate.
+  mix assets.setup
 else
-  echo "Warning: 'mix' not found on PATH — skipping deps.get and ecto.create."
+  echo "Warning: 'mix' not found on PATH — skipping deps.get and assets.setup."
 fi
 
 cat <<EOF
@@ -159,6 +158,9 @@ cat <<EOF
 Materialization complete.
 
 Next steps:
+  docker compose up -d
+  mix ecto.create
+  mix ecto.migrate
   git add . && git commit -m "Initial commit"
   mix phx.server
 
