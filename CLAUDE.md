@@ -21,9 +21,9 @@ The template captures the wiring I reach for on every new Phoenix project so I c
 | Vue 3 SPA (Vite 8 + Tailwind v4 + Meldui + OXC + Pinia + Vue Router 5) | ✓ in place | Vite-served in dev on `:4001` (HMR `:4002`), digested into `priv/static/assets/` in prod. `root.html.heex` injects `<script>` tags conditionally on `Application.get_env(:phoenix_vue_template, :vite_dev_server)`. SPA catch-all route is declared LAST. CSRF token in `<meta name="csrf-token">`, read by `frontend/src/lib/csrf.ts`. Meldui (Reka-UI based) is the component substrate; Tabler icons via `@meldui/tabler-vue`; Geist + Bricolage Grotesque fonts via `@fontsource-variable/*`. |
 | Oban (OSS 2.22) | ✓ in place | Two-release topology in `config/runtime.exs`: `phoenix_vue_template_server` runs `default`/`mailer` queues + Pruner + Cron; `phoenix_vue_template_processors` runs heavy queues + Pruner only. Tests use `testing: :inline`. |
 | Credo (`--strict`) + Dialyzer | ✓ in place | Comprehensive `.credo.exs` check list. Dialyzer PLT stored at `priv/plts/` (gitignored). Both run as part of `mix precommit`. |
-| Authentication | ✗ | Three-module split: `PhoenixVue.Accounts` (identity), `PhoenixVue.Organizations` (tenancy), `PhoenixVue.Auth` (plugs/tokens/mailers) |
-| Query modules | ✗ | Every schema `lib/.../<thing>.ex` gets a sibling `<thing>_queries.ex`; schemas never call `Repo` |
-| Migrations / schemas / API routes / OAuth / storage façade | ✗ | Add as features land; follow established conventions |
+| Authentication | ⚡ generator | `mix phoenix_vue.gen.auth --mode {single\|multi}` lands the full stack (User / PasswordCredential / Session / Organization / Member, migrations, three-module split, JSON controllers, Argon2id hasher, session-fixation defense, opaque DB-backed cookie tokens, CSRF wiring, Vue SPA login/register/forgot/verify/onboarding views, Pinia auth store). One-shot — see the **Generators** section below. |
+| Query modules | ✓ convention | Established by the auth generator's output: every schema `lib/.../<thing>.ex` gets a sibling `<thing>_queries.ex`; schemas never call `Repo`. Follow the same pattern when adding your own schemas. |
+| OAuth, SAML, 2FA, audit log, storage façade, fine-grained RBAC | ✗ | Add as features land; mirror established conventions and `mix phoenix_vue.gen.auth`'s structure. |
 
 ## Essential Commands
 
@@ -160,10 +160,41 @@ For prod (`MIX_ENV=prod mix assets.deploy`), Vite builds into `priv/static/asset
 
 - **Never add `Co-Authored-By: Claude ...` trailers** to commit messages. Author the commit normally; no AI attribution.
 
+## Generators
+
+The template ships single-shot `mix` generators under `lib/mix/tasks/` that drop pre-wired stacks into the materialized app. Templates live in `priv/templates/<generator>/`. Each generator runs once on a fresh app, refuses to run if its output already exists, and resolves the target app's OTP atom / base module / web module / repo / mailer at run time (via `Mix.Project.config` + `Mix.Phoenix.{base,web_module}/0,1`) so the templates work regardless of what name `materialize.sh` gave the project.
+
+### `mix phoenix_vue.gen.auth --mode {single|multi}`
+
+Lands the full authentication stack — DB schemas + migrations, Accounts / Organizations / Auth contexts, JSON `/api/*` controllers (registration, sessions, me, password reset, email verification, organizations, switch-organization), HttpOnly auth cookie + CSRF wiring, Argon2id password hashing with PHC param-upgrade rehash detection, session-sweeper Oban cron, Swoosh mailer with Oban delivery worker (tokens never sit in `oban_jobs.args`), Vue SPA pages (Login / Register / RegisterSent / ForgotPassword / ForgotPasswordSent / ResetPassword / VerifyEmail / CreateOrganization onboarding), `AuthLayout` + `OnboardingLayout`, Pinia `auth` store, `fetch`-based `api.ts` wrapper with CSRF retry, router guards. Ships `OrganizationSwitcher.vue` and the switch endpoint as a tested component but does not mount the switcher in any layout — drop it into your app chrome when ready.
+
+**Modes**
+
+| `--mode` | Behavior |
+|---|---|
+| `multi` (default) | Users can belong to N organizations. Fresh signup → `/onboarding/create-organization`. |
+| `single` | Users belong to exactly one organization, auto-created at signup. DB-level partial unique index enforces it. Onboarding screen still exists but the router auto-skips it. |
+
+Flipping `single` → `multi` later is one constant change in `frontend/src/lib/auth-mode.ts` plus an Ecto migration that drops the `members_single_tenant_user_id_index`.
+
+**Two-cookie design** (mirrored from doqo-server)
+- `_<app>_auth` — opaque random 32-byte token; SHA-256 hashed at rest in `sessions`. HttpOnly, `Secure` in prod, `SameSite=Lax`. Set directly via `Plug.Conn.put_resp_cookie/4` — never flows through `Plug.Session`.
+- `_<app>_key` (the stock `Plug.Session` cookie) — *only* carries the CSRF token. The SPA reads it from `<meta name="csrf-token">` and sends `X-CSRF-Token` on every mutating XHR.
+
+**Not generated** (deliberate scope cuts — add later as separate generators or by hand):
+- OAuth providers (Identity schema, `mix phoenix_vue.gen.oauth` is a future task)
+- Invite UI (the `invite_token_hash` columns + `Member.invitation_changeset/2` / `claim_changeset/2` ship — wire a controller + view when you need them)
+- Rate limiting (no Hammer; the auth endpoints lean on Argon2 lockout for the most-abused path)
+- App chrome (NavRail, UserProfileMenu, SecurityView, Members list) — apps wire their own
+- 2FA, WebAuthn, magic links, audit log
+
+**Re-running** is intentionally blocked: the task refuses if `<Base>.Accounts` already compiles or if anchor markers are missing in the in-place files. Delete the generated modules first if you really want to regenerate.
+
 ## When Extending the Template
 
-Before adding a new architectural piece (auth, OAuth, storage, query modules, etc.):
+Before adding a new architectural piece (OAuth, storage, query modules, etc.):
 
 1. Prefer mirroring battle-tested implementations from prior production code over inventing new structure. If the user references a specific reference codebase, read the relevant files there first.
 2. Mirror module naming (`Accounts` / `Organizations` / `Auth` split), error tuples (`{:ok, _} | {:error, _}`, never `!` bangs in app code), the query-module split (`<thing>.ex` schema + sibling `<thing>_queries.ex`; schemas never call `Repo`), and façade modules for external systems (storage, search, LLM, etc.).
-3. Update this CLAUDE.md to flip the corresponding row in the "Current State vs. Template Goal" table from ✗ to ✓ once the piece lands.
+3. If the piece is the kind of thing a fresh project needs every time, **make it a generator** under `lib/mix/tasks/phoenix_vue.gen.<thing>.ex` + `priv/templates/phoenix_vue.gen.<thing>/`. Mirror the `gen.auth` task's structure: assigns resolution, preflight, EEx walk with `__app__` / `__nowN__` path tokens, anchored in-place patches, `mix format` after.
+4. Update this CLAUDE.md to add the new generator to the **Generators** section and flip the corresponding row in the "Current State vs. Template Goal" table to ✓ or ⚡ once the piece lands.

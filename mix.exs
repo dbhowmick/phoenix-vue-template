@@ -66,8 +66,11 @@ defmodule PhoenixVue.MixProject do
       {:oban, "~> 2.22"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
-    ]
+    ] ++ auth_deps()
   end
+
+  # Replaced when `mix phoenix_vue.gen.auth` runs.
+  defp auth_deps, do: []
 
   # Aliases are shortcuts or tasks specific to the current project.
   # For example, to install project dependencies and perform other setup tasks, run:

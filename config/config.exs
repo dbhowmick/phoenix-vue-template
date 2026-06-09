@@ -40,6 +40,9 @@ config :logger, :default_formatter,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# Auth configuration is inserted above the next line by `mix phoenix_vue.gen.auth`.
+# phoenix_vue:gen.auth:config_anchor
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

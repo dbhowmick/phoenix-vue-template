@@ -15,11 +15,13 @@ defmodule PhoenixVueWeb.Router do
     plug :accepts, ["json"]
   end
 
-  # Other scopes may use custom stacks. Declare API routes here so they match
-  # before the SPA catch-all below.
-  # scope "/api", PhoenixVueWeb do
-  #   pipe_through :api
-  # end
+  # Auth pipelines are inserted above the next line by `mix phoenix_vue.gen.auth`.
+  # phoenix_vue:gen.auth:pipelines_anchor
+
+  # API scopes are inserted above the next line by `mix phoenix_vue.gen.auth`.
+  # Declare additional scopes ABOVE that anchor so they match before the SPA
+  # catch-all at the bottom of this file.
+  # phoenix_vue:gen.auth:scopes_anchor
 
   # Enable LiveDashboard and Swoosh mailbox preview in development.
   # Declared BEFORE the SPA catch-all so /dev/* routes match first.

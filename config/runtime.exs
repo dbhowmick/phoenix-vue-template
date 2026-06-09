@@ -52,14 +52,18 @@ oban_queues =
       [default: 10, mailer: 5]
   end
 
+# Generator-managed cron entries. `mix phoenix_vue.gen.auth` replaces the next
+# line with its sweeper schedule. Hand-edit the list below to add your own.
+auth_crontab = []
+project_crontab = []
+
 oban_plugins =
   if System.get_env("RELEASE_NAME") == "phoenix_vue_template_processors" do
     [{Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7}]
   else
     [
       {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
-      # Add cron jobs here. Empty crontab is fine — projects fill it in.
-      {Oban.Plugins.Cron, crontab: []}
+      {Oban.Plugins.Cron, crontab: auth_crontab ++ project_crontab}
     ]
   end
 
@@ -162,4 +166,8 @@ if config_env() == :prod do
   #     config :swoosh, :api_client, Swoosh.ApiClient.Req
   #
   # See https://hexdocs.pm/swoosh/Swoosh.html#module-installation for details.
+
+  # Auth prod overrides (cookie domain, secure flag, etc.) are inserted above
+  # the next line by `mix phoenix_vue.gen.auth`.
+  # phoenix_vue:gen.auth:prod_anchor
 end
