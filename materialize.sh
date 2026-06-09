@@ -205,6 +205,16 @@ Next steps:
   git add . && git commit -m "Initial commit"
   mix phx.server
 
+Want authentication? Drop in the full stack (users, sessions, organizations,
+JSON API, Vue auth pages) with the generator:
+
+  mix phoenix_vue.gen.auth --mode multi    # users can belong to N orgs (default)
+  mix phoenix_vue.gen.auth --mode single   # one org per user, auto-created
+  mix deps.get && mix ecto.migrate         # picks up argon2_elixir + applies new migrations
+
+The generator is single-shot. See the "Adding authentication" section in
+README.md for the full scope.
+
 EOF
 
 # ---------- Self-delete ----------

@@ -255,6 +255,7 @@ defmodule Mix.Tasks.PhoenixVue.Gen.Auth do
     patch_config_exs(assigns)
     patch_runtime_exs(assigns)
     patch_router_exs(assigns)
+    patch_claude_md(assigns)
     run_formatter()
   end
 
@@ -423,6 +424,76 @@ defmodule Mix.Tasks.PhoenixVue.Gen.Auth do
         # below matches every other path.
       """
     )
+  end
+
+  defp patch_claude_md(assigns) do
+    path = Path.join(File.cwd!(), "CLAUDE.md")
+
+    if File.exists?(path) do
+      do_patch_claude_md(path, assigns)
+    else
+      Mix.shell().info(
+        "* skipping CLAUDE.md patch (file not found — only the template's own CLAUDE.md ships this anchor)"
+      )
+    end
+  end
+
+  defp do_patch_claude_md(path, assigns) do
+    contents = File.read!(path)
+
+    pattern =
+      ~r/<!-- phoenix_vue:gen\.auth:claude_anchor:begin -->.*?<!-- phoenix_vue:gen\.auth:claude_anchor:end -->/s
+
+    if Regex.match?(pattern, contents) do
+      replacement = claude_md_post_install(assigns)
+      File.write!(path, Regex.replace(pattern, contents, replacement))
+      Mix.shell().info("* patching CLAUDE.md")
+    else
+      Mix.shell().info(
+        "* skipping CLAUDE.md patch (auth anchor not found — leaving CLAUDE.md alone)"
+      )
+    end
+  end
+
+  defp claude_md_post_install(assigns) do
+    """
+    ## Authentication
+
+    ✓ in place (mode: `#{assigns.mode}`) — landed by `mix phoenix_vue.gen.auth`.
+
+    **Three-module split** (do not collapse):
+    - `#{assigns.base_string}.Accounts` — identity (User, PasswordCredential, Session, sibling `_queries` modules; register / authenticate / verify_email / start_password_reset / complete_password_reset / change_password / session lifecycle).
+    - `#{assigns.base_string}.Organizations` — tenancy (Organization, Member, queries; create_organization_for_user / verify_member_for_user / list_memberships_for_user).
+    - `#{assigns.base_string}.Auth` — primitives (Token, PasswordHasher, PasswordPolicy, Config, SessionSweeper Oban worker, Mailer.AuthMailer + Mailer.DeliverWorker).
+
+    Schemas never call `Repo` — every `<thing>.ex` has a sibling `<thing>_queries.ex` that returns `Ecto.Query` only. Contexts execute.
+
+    **Two cookies**:
+    - `_#{assigns.app_string}_auth` — opaque 32-byte random token, SHA-256 hashed at rest. HttpOnly, `Secure` in prod (via `AUTH_COOKIE_DOMAIN` / runtime config). The actual session.
+    - `_#{assigns.app_string}_key` — `Plug.Session`. Used **only** as the CSRF token carrier. The SPA reads it from `<meta name="csrf-token">` and sends `X-CSRF-Token` on every mutating XHR.
+
+    **JSON API** under `/api/`:
+    - Public: `POST /api/auth/register`, `POST /api/sessions`, `POST /api/me/{password-reset,password-reset/confirm,email-verification/confirm,email-verification/resend}`
+    - Authenticated: `GET /api/me`, `DELETE /api/sessions/current`, `POST /api/sessions/revoke-all`, `POST /api/me/{switch-organization,change-password}`, `POST /api/organizations`
+    - All `{:error, _}` from contexts flow through `#{assigns.web_string}.Api.FallbackController` → canonical envelope via `#{assigns.web_string}.Api.Errors`.
+
+    **SPA**:
+    - Views: `frontend/src/views/auth/{Login,Register,RegisterSent,ForgotPassword,ForgotPasswordSent,ResetPassword,VerifyEmail}View.vue` and `frontend/src/views/onboarding/CreateOrganizationView.vue`.
+    - Layouts: `frontend/src/layouts/{AuthLayout,OnboardingLayout}.vue`.
+    - Pinia store: `frontend/src/stores/auth.ts` — `hydrate()` runs once on app boot in `main.ts` before mount, so router guards see the resolved identity on first render.
+    - Fetch wrapper: `frontend/src/lib/api.ts` — `credentials: 'include'`, attaches `X-CSRF-Token` on mutations, retries once on stale-CSRF 403.
+
+    **Mode**: `#{assigns.mode}`. The data model is identical between modes — `MODE` in `frontend/src/lib/auth-mode.ts` is the only behavioral switch (single mode hides org-switcher UI; multi routes first-signup to onboarding). Flipping single → multi later: change the constant + drop `members_single_tenant_user_id_index` in a new migration.
+
+    **Built but unmounted** (drop into your chrome when ready): `frontend/src/components/org/OrganizationSwitcher.vue`. The switch endpoint (`POST /api/me/switch-organization`) is wired and tested.
+
+    **Deliberately not generated** (add as separate features):
+    - OAuth (Identity schema, future `mix phoenix_vue.gen.oauth`)
+    - Invite UI (the `invite_token_hash` columns + `Member.invitation_changeset/2` / `claim_changeset/2` ship; wire a controller + view when you need them)
+    - Rate limiting (auth endpoints lean on Argon2 lockout for the most-abused path)
+    - App chrome (NavRail, UserProfileMenu, SecurityView, Members list)
+    - 2FA, WebAuthn, magic links, audit log
+    """
   end
 
   defp patch_file!(path, old, new) do

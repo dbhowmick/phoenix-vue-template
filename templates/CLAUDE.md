@@ -31,6 +31,20 @@ mix precommit                          # compile --warnings-as-errors + deps.unl
 
 Run `mix precommit` before every commit.
 
+<!-- phoenix_vue:gen.auth:claude_anchor:begin -->
+## Authentication
+
+**Not yet enabled.** This project ships with a single-shot generator that lands a complete auth stack — User / PasswordCredential / Session / Organization / Member schemas, JSON API, Vue SPA pages (sign-up / login / forgot-password / email verification / onboarding), Pinia auth store, CSRF-aware fetch wrapper.
+
+```sh
+mix phoenix_vue.gen.auth --mode multi    # users can belong to N organizations (default)
+mix phoenix_vue.gen.auth --mode single   # one organization per user, auto-created at signup
+mix deps.get && mix ecto.migrate
+```
+
+The generator is single-shot and refuses to re-run. When it lands, it replaces this section with the post-install description (which modules went where, what's wired vs not, mode chosen).
+<!-- phoenix_vue:gen.auth:claude_anchor:end -->
+
 ## Architecture
 
 - `lib/__OTP__/` — business logic root: `application.ex`, `repo.ex`, `mailer.ex`. New contexts go here.

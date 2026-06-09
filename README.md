@@ -72,6 +72,39 @@ mix phx.server               # also spawns vite-dev on :4001
 
 Open <http://localhost:4000>, and you're shipping.
 
+## Adding authentication
+
+The template ships a single-shot generator that drops in a complete auth stack
+— User / PasswordCredential / Session / Organization / Member schemas,
+migrations, a three-module split (`<App>.Accounts` / `<App>.Organizations` /
+`<App>.Auth`), JSON API (`/api/auth/register`, `/api/sessions`, `/api/me`,
+`/api/me/password-reset`, etc.), HttpOnly auth cookie + CSRF wiring, Argon2id
+password hashing, session-sweeper Oban cron, Swoosh mailer with Oban delivery
+worker, Vue SPA pages (Login / Register / Forgot / Reset / VerifyEmail /
+Onboarding), Pinia auth store, and a CSRF-aware fetch wrapper.
+
+```sh
+mix phoenix_vue.gen.auth --mode multi    # users can belong to N organizations (default)
+mix phoenix_vue.gen.auth --mode single   # one organization per user, auto-created at signup
+mix deps.get                             # picks up argon2_elixir + plug_crypto
+mix ecto.migrate                         # applies the new auth migrations
+mix phx.server
+```
+
+The generator is **single-shot** and refuses to re-run. The data model is
+identical between modes — flipping `single → multi` later is one constant
+change in `frontend/src/lib/auth-mode.ts` plus a migration dropping the
+`members_single_tenant_user_id_index`.
+
+When it lands, the generator rewrites the `phoenix_vue:gen.auth:claude_anchor`
+block in your project's `CLAUDE.md` so the AI-facing project guide reflects
+the wired-up state (which modules live where, what's in vs out).
+
+What's **not** included by design: OAuth, invite UI (columns and changesets
+ship though, so adding it later is just a controller + view), rate limiting,
+app chrome (`NavRail` / `UserProfileMenu` / `SecurityView` / members list —
+you wire your own), 2FA / WebAuthn / magic links.
+
 ## Day-to-day commands
 
 ```
