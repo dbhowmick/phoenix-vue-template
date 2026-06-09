@@ -40,6 +40,39 @@ OTP="$(printf '%s' "$MODULE" \
   | sed -E 's/([a-z0-9])([A-Z])/\1_\2/g; s/([A-Z]+)([A-Z][a-z])/\1_\2/g' \
   | tr '[:upper:]' '[:lower:]')"
 
+# Round-trip check: Elixir's `Macro.camelize(Macro.underscore(name))` must
+# equal `name`, otherwise Mix's task discovery (and anything else that
+# rebuilds the module name from the OTP atom) will look up the wrong
+# module. Names with consecutive capitals like `A2UITest` fail this:
+# underscore → `a2_ui_test`, camelize → `A2UiTest` ≠ `A2UITest`.
+camelize_otp() {
+  local input="$1"
+  local out=""
+  local part
+  local IFS='_'
+  set -- $input
+  for part in "$@"; do
+    out+="$(printf '%s' "${part:0:1}" | tr '[:lower:]' '[:upper:]')${part:1}"
+  done
+  printf '%s' "$out"
+}
+
+EXPECTED_MODULE="$(camelize_otp "$OTP")"
+if [ "$EXPECTED_MODULE" != "$MODULE" ]; then
+  cat >&2 <<EOF
+Error: '$MODULE' does not survive Elixir's underscore/camelize round-trip:
+
+  $MODULE  →  Macro.underscore  →  $OTP
+            →  Macro.camelize    →  $EXPECTED_MODULE
+
+This means Mix's task discovery and any code that rebuilds module names
+from the OTP atom will look up a module that doesn't exist. Avoid runs
+of consecutive capital letters in PascalCase. Try '$EXPECTED_MODULE'
+instead.
+EOF
+  exit 1
+fi
+
 echo
 echo "Materializing template with:"
 echo "  Module (business): $MODULE"
