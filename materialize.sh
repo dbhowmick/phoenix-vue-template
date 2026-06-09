@@ -77,6 +77,14 @@ should_skip_path() {
   case "$1" in
     materialize.sh) return 0 ;;
     templates/*) return 0 ;;
+    # Generator infrastructure ships with stable, project-name-agnostic
+    # identifiers — `mix phoenix_vue.gen.auth` stays the same command on
+    # every materialized project, and EEx templates stay parameterized
+    # via `<%= @base_string %>` etc. (resolved at generator-run time
+    # from the target app's identifiers). Rewriting them would (a) break
+    # the task's module name, (b) corrupt the EEx placeholders.
+    lib/mix/tasks/*) return 0 ;;
+    priv/templates/*) return 0 ;;
   esac
   return 1
 }
