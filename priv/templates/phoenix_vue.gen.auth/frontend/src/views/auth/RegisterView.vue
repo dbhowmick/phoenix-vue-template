@@ -12,7 +12,7 @@ import {
   Input,
   Label,
 } from '@meldui/vue'
-import { IconEye, IconEyeOff, IconLoader2 } from '@meldui/tabler-vue'
+import { IconEye, IconEyeOff, IconLoader2, IconUserPlus } from '@meldui/tabler-vue'
 import { useAuthStore } from '@/stores/auth'
 import { useErrorMessage } from '@/composables/useErrorMessage'
 
@@ -137,9 +137,10 @@ async function handleSubmit() {
         </div>
       </CardContent>
 
-      <CardFooter class="flex flex-col gap-3">
+      <CardFooter class="flex flex-col gap-3 pt-4">
         <Button type="submit" class="w-full" :disabled="submitting">
           <IconLoader2 v-if="submitting" class="size-4 animate-spin" />
+          <IconUserPlus v-else class="size-4" />
           {{ submitting ? 'Creating account…' : 'Create account' }}
         </Button>
         <p class="text-xs text-muted-foreground text-center">

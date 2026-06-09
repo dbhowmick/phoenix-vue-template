@@ -12,7 +12,7 @@ import {
   Input,
   Label,
 } from '@meldui/vue'
-import { IconLoader2 } from '@meldui/tabler-vue'
+import { IconLoader2, IconLock } from '@meldui/tabler-vue'
 import { api } from '@/lib/api'
 import { useErrorMessage } from '@/composables/useErrorMessage'
 
@@ -104,9 +104,10 @@ async function handleSubmit() {
         </div>
       </CardContent>
 
-      <CardFooter class="flex flex-col gap-3">
+      <CardFooter class="flex flex-col gap-3 pt-4">
         <Button type="submit" class="w-full" :disabled="submitting">
           <IconLoader2 v-if="submitting" class="size-4 animate-spin" />
+          <IconLock v-else class="size-4" />
           {{ submitting ? 'Updating…' : 'Update password' }}
         </Button>
         <p class="text-xs text-muted-foreground text-center">
